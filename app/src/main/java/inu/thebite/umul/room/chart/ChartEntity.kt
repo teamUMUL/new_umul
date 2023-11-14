@@ -12,8 +12,10 @@ data class ChartEntity(
     val date : String,
     @ColumnInfo("gameMode")
     val gameMode : String,
+    @ColumnInfo("time")
+    val time : String,
     @ColumnInfo("chewCount")
     val chewCount : Float,
-    @ColumnInfo("time")
-    val time : Float,
+    @ColumnInfo("timeFloat")
+    val timeFloat : Float,
 )

@@ -24,23 +24,31 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.paint
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -71,6 +79,7 @@ import com.patrykandpatrick.vico.core.entry.entriesOf
 import inu.thebite.umul.R
 import inu.thebite.umul.bluetooth.domain.BluetoothDevice
 import inu.thebite.umul.bluetooth.presentation.BluetoothUiState
+import inu.thebite.umul.bluetooth.presentation.BluetoothViewModel
 import inu.thebite.umul.bluetooth.presentation.ChartViewModel
 import inu.thebite.umul.room.chart.ChartEntity
 import java.text.SimpleDateFormat
@@ -85,7 +94,8 @@ fun DeviceScreen(
     onStopScan: () -> Unit,
     onStartServer: () -> Unit,
     onDeviceClick: (BluetoothDevice) -> Unit,
-    selectedChart: ChartEntity?
+    selectedChart: ChartEntity?,
+    bluetoothViewModel : BluetoothViewModel
 ) {
     val (gameOn, setGameOn) = rememberSaveable {
         mutableStateOf(false)
@@ -135,7 +145,9 @@ fun DeviceScreen(
                 }
             }
             if(gameStart){
-                Column(modifier = Modifier.fillMaxSize().padding(10.dp)) {
+                Column(modifier = Modifier
+                    .fillMaxSize()
+                    .padding(10.dp)) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -160,9 +172,11 @@ fun DeviceScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Image(
-                        modifier = Modifier.clickable {
-                            setGameStart(true)
-                        },
+                        modifier = Modifier
+                            .clickable {
+                                setGameStart(true)
+                            }
+                            .size(400.dp),
                         painter = painterResource(id = R.drawable.game_start), contentDescription = null
                     )
                 }
@@ -199,37 +213,61 @@ fun DeviceScreen(
                 .border(2.dp, color = Color.Black, RoundedCornerShape(8.dp)),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            BluetoothDeviceList(
-                pairedDevices = state.pairedDevices,
-                scannedDevices = state.scannedDevices,
-                onClick = onDeviceClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-            )
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.SpaceAround
-            ) {
-                Button(
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = onStartScan
-                ) {
-                    Text(text = "Start scan")
+            when {
+                state.isConnecting -> {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        CircularProgressIndicator()
+                        Text(text = "Connecting...")
+                    }
                 }
-                Button(
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = onStopScan
-                ) {
-                    Text(text = "Stop scan")
+
+                state.isConnected -> {
+                    ChatScreen(
+                        state = state,
+                        onDisconnect = bluetoothViewModel::disconnectFromDevice,
+                        onSendMessage = bluetoothViewModel::sendMessage
+                    )
                 }
-                Button(
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = onStartServer
-                ) {
-                    Text(text = "Start server")
+
+                else -> {
+                    BluetoothDeviceList(
+                        pairedDevices = state.pairedDevices,
+                        scannedDevices = state.scannedDevices,
+                        onClick = onDeviceClick,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                    )
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.SpaceAround
+                    ) {
+                        Button(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = onStartScan
+                        ) {
+                            Text(text = "Start scan")
+                        }
+                        Button(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = onStopScan
+                        ) {
+                            Text(text = "Stop scan")
+                        }
+                        Button(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = onStartServer
+                        ) {
+                            Text(text = "Start server")
+                        }
+                    }
                 }
             }
+
         }
         Column(
             modifier = Modifier
@@ -383,7 +421,7 @@ fun ChewBarChart(
     val chartEntryModelProducer = ChartEntryModelProducer(entriesOf(dataList[0], dataList[1]))
     val columnChart = columnChart(
         columns = listOf(LineComponent(
-            color = R.color.teal_200,
+            color = R.color.black,
             thicknessDp = 50f,
             shape = Shapes.roundedCornerShape(allPercent = 20)
         )
@@ -435,7 +473,7 @@ fun TimeBarChart(
     val chartEntryModelProducer = ChartEntryModelProducer(entriesOf(dataList[0], dataList[1]))
     val columnChart = columnChart(
         columns = listOf(LineComponent(
-            color = R.color.teal_200,
+            color = R.color.black,
             thicknessDp = 50f,
             shape = Shapes.roundedCornerShape(allPercent = 20)
             )
@@ -471,11 +509,22 @@ fun TimeBarChart(
         ),
     )
 }
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SelectCalendarRow(
     selectedDay : String,
     calendarShow : () -> Unit
 ){
+    var isExpanded by remember {
+        mutableStateOf(false)
+    }
+
+    val selectedTime = rememberSaveable {
+        mutableStateOf("아침")
+    }
+    val timeList = listOf(
+        "아침","점심","저녁"
+    )
     Row(
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -493,8 +542,57 @@ fun SelectCalendarRow(
         ) {
             Icon(painter = painterResource(id = R.drawable.icon_calendar), contentDescription = null)
         }
+        ExposedDropdownMenuBox(
+            expanded = isExpanded,
+            onExpandedChange = {isExpanded = !isExpanded}
+        ){
+            TextField(
+                value = selectedTime.value,
+                onValueChange = {},
+                readOnly = true,
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = isExpanded)
+                },
+                colors = ExposedDropdownMenuDefaults.textFieldColors(
+                    focusedContainerColor= Color.Transparent,
+                    unfocusedContainerColor= Color.Transparent,
+                    disabledContainerColor= Color.Transparent,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    disabledIndicatorColor = Color.Transparent,
+                ),
+                textStyle = TextStyle(
+                    color = Color.Black,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                ),
+                modifier = Modifier
+                    .menuAnchor()
+                    .padding(0.dp)
+                    .width(200.dp)
+            )
+
+            ExposedDropdownMenu(
+                expanded = isExpanded,
+                onDismissRequest = {isExpanded = false},
+            ){
+                timeList.forEach { time ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(text = time)
+                        },
+                        onClick = {
+                            isExpanded = false
+                            selectedTime.value = time
+                        }
+                    )
+                }
+            }
+
+        }
     }
 }
+
 
 @Composable
 fun GameButtonsRow(

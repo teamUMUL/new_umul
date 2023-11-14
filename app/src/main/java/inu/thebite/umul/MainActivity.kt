@@ -104,35 +104,15 @@ class MainActivity : ComponentActivity() {
                 Surface(
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    when {
-                        state.isConnecting -> {
-                            Column(
-                                modifier = Modifier.fillMaxSize(),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                CircularProgressIndicator()
-                                Text(text = "Connecting...")
-                            }
-                        }
-                        state.isConnected -> {
-                            ChatScreen(
-                                state = state,
-                                onDisconnect = bluetoothViewModel::disconnectFromDevice,
-                                onSendMessage = bluetoothViewModel::sendMessage
-                            )
-                        }
-                        else -> {
-                            DeviceScreen(
-                                state = state,
-                                onStartScan = bluetoothViewModel::startScan,
-                                onStopScan = bluetoothViewModel::stopScan,
-                                onDeviceClick = bluetoothViewModel::connectToDevice,
-                                onStartServer = bluetoothViewModel::waitForIncomingConnections,
-                                selectedChart = selectedChart
-                            )
-                        }
-                    }
+                    DeviceScreen(
+                        state = state,
+                        onStartScan = bluetoothViewModel::startScan,
+                        onStopScan = bluetoothViewModel::stopScan,
+                        onDeviceClick = bluetoothViewModel::connectToDevice,
+                        onStartServer = bluetoothViewModel::waitForIncomingConnections,
+                        selectedChart = selectedChart,
+                        bluetoothViewModel = bluetoothViewModel
+                    )
                 }
             }
         }

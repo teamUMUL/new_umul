@@ -26,10 +26,9 @@ object AppModule {
     @Provides
     @Singleton
     fun provideChartDb(app: Application): ChartDatabase{
-        return Room.databaseBuilder(
-            app,
-            ChartDatabase::class.java,
-            "chart db"
-        ).build()
+        return Room
+            .databaseBuilder(app, ChartDatabase::class.java, "chart db")
+                .fallbackToDestructiveMigration()
+                .build()
     }
 }

@@ -37,12 +37,14 @@ class ChartViewModel @Inject constructor(
 
     fun getChartByDateAndGameMode(
         date : String,
-        gameMode : String
+        gameMode : String,
+        time : String
     ){
         _selectedChart.update {
             allCharts.value.find {
                 it.date == date &&
-                it.gameMode == gameMode
+                it.gameMode == gameMode &&
+                it.time == time
             }
         }
     }
