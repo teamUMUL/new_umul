@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import inu.thebite.umul.bluetooth.presentation.BluetoothViewModel
+import inu.thebite.umul.bluetooth.presentation.ChartViewModel
 import inu.thebite.umul.bluetooth.presentation.components.ChatScreen
 import inu.thebite.umul.bluetooth.presentation.components.DeviceScreen
 import inu.thebite.umul.ui.theme.UmulTheme
@@ -73,8 +74,9 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             UmulTheme {
-                val viewModel = hiltViewModel<BluetoothViewModel>()
-                val state by viewModel.state.collectAsState()
+                val bluetoothViewModel = hiltViewModel<BluetoothViewModel>()
+
+                val state by bluetoothViewModel.state.collectAsState()
 
                 LaunchedEffect(key1 = state.errorMessage) {
                     state.errorMessage?.let { message ->
@@ -96,6 +98,9 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                val chartViewModel = hiltViewModel<ChartViewModel>()
+                val selectedChart by chartViewModel.selectedChart.collectAsState()
+
                 Surface(
                     color = MaterialTheme.colorScheme.background
                 ) {
@@ -113,17 +118,18 @@ class MainActivity : ComponentActivity() {
                         state.isConnected -> {
                             ChatScreen(
                                 state = state,
-                                onDisconnect = viewModel::disconnectFromDevice,
-                                onSendMessage = viewModel::sendMessage
+                                onDisconnect = bluetoothViewModel::disconnectFromDevice,
+                                onSendMessage = bluetoothViewModel::sendMessage
                             )
                         }
                         else -> {
                             DeviceScreen(
                                 state = state,
-                                onStartScan = viewModel::startScan,
-                                onStopScan = viewModel::stopScan,
-                                onDeviceClick = viewModel::connectToDevice,
-                                onStartServer = viewModel::waitForIncomingConnections
+                                onStartScan = bluetoothViewModel::startScan,
+                                onStopScan = bluetoothViewModel::stopScan,
+                                onDeviceClick = bluetoothViewModel::connectToDevice,
+                                onStartServer = bluetoothViewModel::waitForIncomingConnections,
+                                selectedChart = selectedChart
                             )
                         }
                     }

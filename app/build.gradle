@@ -70,6 +70,21 @@ dependencies {
     debugImplementation 'androidx.compose.ui:ui-tooling'
     debugImplementation 'androidx.compose.ui:ui-test-manifest'
 
+    //Calendar
+    implementation 'com.maxkeppeler.sheets-compose-dialogs:calendar:1.0.2'
+
+    //Graph
+    // Provides the utilities needed to use Vico in the view system.
+    implementation "com.patrykandpatrick.vico:views:1.12.0"
+
+    // Provides the utilities needed to use Vico in Jetpack Compose.
+    implementation "com.patrykandpatrick.vico:compose:1.12.0"
+
+    // An optional addition for `vico.compose` that creates a `ChartStyle` based on an M2 Material Theme.
+    implementation "com.patrykandpatrick.vico:compose-m2:1.12.0"
+
+    // An optional addition for `vico.compose` that creates a `ChartStyle` based on an M3 Material Theme.
+    implementation "com.patrykandpatrick.vico:compose-m3:1.12.0"
 
     // Room
     def room_version = "2.5.2"
