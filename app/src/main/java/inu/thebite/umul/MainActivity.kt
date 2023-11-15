@@ -111,6 +111,7 @@ class MainActivity : ComponentActivity() {
                         onDeviceClick = bluetoothViewModel::connectToDevice,
                         onStartServer = bluetoothViewModel::waitForIncomingConnections,
                         selectedChart = selectedChart,
+                        chartViewModel = chartViewModel,
                         bluetoothViewModel = bluetoothViewModel
                     )
                 }

@@ -1,9 +1,11 @@
 package inu.thebite.umul.bluetooth.presentation.components
 
+import android.content.Context
 import android.util.Log
-import android.widget.ImageButton
+import androidx.compose.animation.graphics.ExperimentalAnimationGraphicsApi
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -14,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -33,20 +36,23 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.paint
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -64,16 +70,13 @@ import com.maxkeppeler.sheets.calendar.models.CalendarStyle
 import com.patrykandpatrick.vico.compose.axis.axisLabelComponent
 import com.patrykandpatrick.vico.compose.axis.horizontal.rememberBottomAxis
 import com.patrykandpatrick.vico.compose.axis.horizontal.rememberTopAxis
-import com.patrykandpatrick.vico.compose.axis.vertical.rememberStartAxis
 import com.patrykandpatrick.vico.compose.chart.Chart
 import com.patrykandpatrick.vico.compose.chart.column.columnChart
 import com.patrykandpatrick.vico.core.axis.Axis
-import com.patrykandpatrick.vico.core.axis.AxisItemPlacer
 import com.patrykandpatrick.vico.core.axis.AxisPosition
 import com.patrykandpatrick.vico.core.axis.formatter.AxisValueFormatter
 import com.patrykandpatrick.vico.core.component.shape.LineComponent
 import com.patrykandpatrick.vico.core.component.shape.Shapes
-import com.patrykandpatrick.vico.core.component.text.TextComponent
 import com.patrykandpatrick.vico.core.entry.ChartEntryModelProducer
 import com.patrykandpatrick.vico.core.entry.entriesOf
 import inu.thebite.umul.R
@@ -81,7 +84,18 @@ import inu.thebite.umul.bluetooth.domain.BluetoothDevice
 import inu.thebite.umul.bluetooth.presentation.BluetoothUiState
 import inu.thebite.umul.bluetooth.presentation.BluetoothViewModel
 import inu.thebite.umul.bluetooth.presentation.ChartViewModel
+import inu.thebite.umul.bluetooth.presentation.components.bluetooth.BluetoothDeviceList
+import inu.thebite.umul.bluetooth.presentation.components.chart.Buttons
+import inu.thebite.umul.bluetooth.presentation.components.chart.CheckGameModeAndChewCount
+import inu.thebite.umul.bluetooth.presentation.components.chart.ChewBarChart
+import inu.thebite.umul.bluetooth.presentation.components.chart.GameButtonsRow
+import inu.thebite.umul.bluetooth.presentation.components.chart.GameScreen
+import inu.thebite.umul.bluetooth.presentation.components.chart.NoChartData
+import inu.thebite.umul.bluetooth.presentation.components.chart.SelectCalendarRow
+import inu.thebite.umul.bluetooth.presentation.components.chart.TimeBarChart
+import inu.thebite.umul.bluetooth.presentation.components.chart.getCurrentDate
 import inu.thebite.umul.room.chart.ChartEntity
+import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
 
@@ -95,8 +109,11 @@ fun DeviceScreen(
     onStartServer: () -> Unit,
     onDeviceClick: (BluetoothDevice) -> Unit,
     selectedChart: ChartEntity?,
+    chartViewModel: ChartViewModel,
     bluetoothViewModel : BluetoothViewModel
 ) {
+    val selectedChart by chartViewModel.selectedChart.collectAsState()
+
     val (gameOn, setGameOn) = rememberSaveable {
         mutableStateOf(false)
     }
@@ -106,83 +123,75 @@ fun DeviceScreen(
     val selectedDay = rememberSaveable {
         mutableStateOf(getCurrentDate())
     }
-    val selectedItem = rememberSaveable {
+    val selectedGameMode = rememberSaveable {
         mutableStateOf("당근게임")
     }
+    val selectedTime = rememberSaveable {
+        mutableStateOf("아침")
+    }
 
-    if(gameOn){
+    val timerValue = remember { mutableStateOf(0) }
+    val timerRunning = remember { mutableStateOf(false) }
+    val realChewCount = rememberSaveable {
+        mutableIntStateOf(0)
+    }
+    LaunchedEffect(Unit){
+        chartViewModel.getChartByDateAndGameMode(
+            date = selectedDay.value,
+            time = selectedTime.value,
+            gameMode = selectedGameMode.value
+        )
+    }
 
-        Dialog(
-            onDismissRequest = {
-                setGameOn(false)
-                setGameStart(false)
-            },
-            properties = DialogProperties(
-                usePlatformDefaultWidth = false,
-            )
-        ){
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-            ) {
-                when(selectedItem.value){
-                    "당근게임" -> {
-                        Image(
-                            painter = painterResource(id = R.drawable.carrot_game_bg),
-                            contentDescription = null,
-                            contentScale = ContentScale.FillBounds,
-                            modifier = Modifier.matchParentSize()
-                        )
-                    }
-                    "풍선게임" -> {
-                        Image(
-                            painter = painterResource(id = R.drawable.balloon_game_bg),
-                            contentDescription = null,
-                            contentScale = ContentScale.FillBounds,
-                            modifier = Modifier.matchParentSize()
-                        )
-                    }
-                }
+    LaunchedEffect(selectedDay.value, selectedTime.value, selectedGameMode.value){
+        chartViewModel.getChartByDateAndGameMode(
+            date = selectedDay.value,
+            time = selectedTime.value,
+            gameMode = selectedGameMode.value
+        )
+    }
+
+
+    LaunchedEffect(gameStart) {
+        if (gameStart) {
+            timerRunning.value = true
+            timerValue.value = 0 // 타이머 초기화
+            while (timerRunning.value) {
+                delay(1000) // 1초마다
+                timerValue.value++ // 타이머 증가
             }
-            if(gameStart){
-                Column(modifier = Modifier
-                    .fillMaxSize()
-                    .padding(10.dp)) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .fillMaxHeight(0.15f)
-                    ) {
-                        Image(
-                            modifier = Modifier
-                                .clickable {
-                                    setGameOn(false)
-                                    setGameStart(false)
-                                }
-                                .fillMaxHeight(),
-                            painter = painterResource(id = R.drawable.game_end_btn), contentDescription = null,
-                            contentScale = ContentScale.FillHeight
-                        )
-                    }
-                }
-            } else {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Image(
-                        modifier = Modifier
-                            .clickable {
-                                setGameStart(true)
-                            }
-                            .size(400.dp),
-                        painter = painterResource(id = R.drawable.game_start), contentDescription = null
+        } else {
+            timerRunning.value = false
+            if(timerValue.value != 0 && realChewCount.intValue != 0){
+                chartViewModel.addChart(
+                    ChartEntity(
+                        chewCount = realChewCount.intValue.toFloat(),
+                        date = selectedDay.value,
+                        gameMode = selectedGameMode.value,
+                        time = selectedTime.value,
+                        timeFloat = timerValue.value.toFloat()
                     )
-                }
+                )
             }
-
+            Log.d("timer", timerValue.value.toString())
+            realChewCount.intValue = 0
+            delay(1000)
+            chartViewModel.getChartByDateAndGameMode(
+                date = selectedDay.value,
+                time = selectedTime.value,
+                gameMode = selectedGameMode.value
+            )
         }
+    }
+
+    if (gameOn) {
+        GameScreen(
+            selectedGameMode = selectedGameMode.value,
+            gameStart = gameStart,
+            setGameOn = { setGameOn(it) },
+            setGameStart = { setGameStart(it) },
+            addRealChewCount = { realChewCount.intValue += 1 }
+        )
     }
 
     val calendarState = rememberSheetState()
@@ -283,12 +292,16 @@ fun DeviceScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 SelectCalendarRow(
+                    modifier = Modifier.weight(0.5f),
                     selectedDay = selectedDay.value,
-                    calendarShow = {calendarState.show()}
+                    selectedTime = selectedTime.value,
+                    calendarShow = {calendarState.show()},
+                    setSelectedTime = {selectedTime.value = it}
                 )
                 GameButtonsRow(
-                    selectedItem = selectedItem.value,
-                    setSelectedItem = {selectedItem.value = it},
+                    modifier = Modifier.weight(0.5f),
+                    selectedItem = selectedGameMode.value,
+                    setSelectedItem = {selectedGameMode.value = it},
                     setGameOn = {setGameOn(it)}
                 )
             }
@@ -320,11 +333,14 @@ fun DeviceScreen(
                         )
                     }
                     Divider(color = Color.Black, thickness = 2.dp)
-                    ChewBarChart(
-                        dataMap = mapOf(
-                            "사용자" to 360f,
-                            "비만군" to 600f
-                    ))
+                    selectedChart?.let {selectedChart ->
+                        ChewBarChart(
+                            dataMap = mapOf(
+                                "사용자" to selectedChart.chewCount,
+                                "비만군" to 600f
+                            )
+                        )
+                    } ?: NoChartData()
                 }
                 Column(
                     modifier = Modifier
@@ -346,395 +362,22 @@ fun DeviceScreen(
                         )
                     }
                     Divider(color = Color.Black, thickness = 2.dp)
-                    selectedChart?.let {
-
-                    }
-                    TimeBarChart(
-                        dataMap = mapOf(
-                            "사용자" to 360f,
-                            "비만군" to 600f
+                    selectedChart?.let {selectedChart ->
+                        TimeBarChart(
+                            dataMap = mapOf(
+                                "사용자" to selectedChart.timeFloat,
+                                "비만군" to 600f
+                            )
                         )
-                    )
+                    } ?: NoChartData()
+
+
+
                 }
             }
         }
     }
 }
 
-@Composable
-fun BluetoothDeviceList(
-    pairedDevices: List<BluetoothDevice>,
-    scannedDevices: List<BluetoothDevice>,
-    onClick: (BluetoothDevice) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    LazyColumn(
-        modifier = modifier
-    ) {
-        item {
-            Text(
-                text = "Paired Devices",
-                fontWeight = FontWeight.Bold,
-                fontSize = 24.sp,
-                modifier = Modifier.padding(16.dp)
-            )
-        }
-        items(pairedDevices) { device ->
-            Text(
-                text = device.name ?: "(No name)",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onClick(device) }
-                    .padding(16.dp)
-            )
-        }
-
-        item {
-            Text(
-                text = "Scanned Devices",
-                fontWeight = FontWeight.Bold,
-                fontSize = 24.sp,
-                modifier = Modifier.padding(16.dp)
-            )
-        }
-        items(scannedDevices) { device ->
-            Text(
-                text = device.name ?: "(No name)",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onClick(device) }
-                    .padding(16.dp)
-            )
-        }
-    }
-}
-@Composable
-fun ChewBarChart(
-    dataMap: Map<String, Float>
-){
-    val dataList = dataMap.values.toList()
-    val chewList = mutableListOf<String>()
-    for (data in dataList){
-        chewList.add(data.toString().substringBefore(".")+"회")
-    }
-    val xLabelList = dataMap.keys.toList()
-    val chartEntryModelProducer = ChartEntryModelProducer(entriesOf(dataList[0], dataList[1]))
-    val columnChart = columnChart(
-        columns = listOf(LineComponent(
-            color = R.color.black,
-            thicknessDp = 50f,
-            shape = Shapes.roundedCornerShape(allPercent = 20)
-        )
-
-        )
-    )
-    Chart(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(10.dp),
-        chart = remember(columnChart) { columnChart },
-        chartModelProducer = chartEntryModelProducer,
-        topAxis = rememberTopAxis(
-            label = axisLabelComponent(color = Color.Black, textSize = 22.sp),
-            valueFormatter = AxisValueFormatter<AxisPosition.Horizontal.Top> { value, _ ->
-                if (value == 0f){
-                    chewList[0]
-                } else {
-                    chewList[1]
-                }
-            },
-            sizeConstraint = Axis.SizeConstraint.Auto()
-        ),
-        bottomAxis = rememberBottomAxis(
-            label = axisLabelComponent(color = Color.Black, textSize = 22.sp),
-            valueFormatter = AxisValueFormatter<AxisPosition.Horizontal.Bottom> { value, _ ->
-                if (value == 0f){
-                    xLabelList[0]
-                } else {
-                    xLabelList[1]
-                }
-            },
-        ),
-    )
-}
-@Composable
-fun TimeBarChart(
-    dataMap : Map<String, Float>
-){
-    val dataList = dataMap.values.toList()
-    val timeList = mutableListOf<String>()
-    for (data in dataList){
-        val totalSeconds = data.toInt()
-        val minutes = totalSeconds/60
-        val seconds = totalSeconds%60
-        timeList.add(minutes.toString()+"분 "+seconds.toString()+"초")
-    }
-    val xLabelList = dataMap.keys.toList()
-    val chartEntryModelProducer = ChartEntryModelProducer(entriesOf(dataList[0], dataList[1]))
-    val columnChart = columnChart(
-        columns = listOf(LineComponent(
-            color = R.color.black,
-            thicknessDp = 50f,
-            shape = Shapes.roundedCornerShape(allPercent = 20)
-            )
-
-        )
-    )
-    Chart(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(10.dp),
-        chart = remember(columnChart) { columnChart },
-        chartModelProducer = chartEntryModelProducer,
-        topAxis = rememberTopAxis(
-            label = axisLabelComponent(color = Color.Black, textSize = 22.sp),
-            valueFormatter = AxisValueFormatter<AxisPosition.Horizontal.Top> { value, _ ->
-                if (value == 0f){
-                    timeList[0]
-                } else {
-                    timeList[1]
-                }
-            },
-            sizeConstraint = Axis.SizeConstraint.Auto()
-        ),
-        bottomAxis = rememberBottomAxis(
-            label = axisLabelComponent(color = Color.Black, textSize = 22.sp),
-            valueFormatter = AxisValueFormatter<AxisPosition.Horizontal.Bottom> { value, _ ->
-                if (value == 0f){
-                    xLabelList[0]
-                } else {
-                    xLabelList[1]
-                }
-            },
-        ),
-    )
-}
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun SelectCalendarRow(
-    selectedDay : String,
-    calendarShow : () -> Unit
-){
-    var isExpanded by remember {
-        mutableStateOf(false)
-    }
-
-    val selectedTime = rememberSaveable {
-        mutableStateOf("아침")
-    }
-    val timeList = listOf(
-        "아침","점심","저녁"
-    )
-    Row(
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            modifier = Modifier
-                .padding(start = 10.dp),
-            text = selectedDay,
-            fontSize = 25.sp,
-            fontWeight = FontWeight.SemiBold
-        )
-        IconButton(
-            onClick = {
-                calendarShow()
-            }
-        ) {
-            Icon(painter = painterResource(id = R.drawable.icon_calendar), contentDescription = null)
-        }
-        ExposedDropdownMenuBox(
-            expanded = isExpanded,
-            onExpandedChange = {isExpanded = !isExpanded}
-        ){
-            TextField(
-                value = selectedTime.value,
-                onValueChange = {},
-                readOnly = true,
-                trailingIcon = {
-                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = isExpanded)
-                },
-                colors = ExposedDropdownMenuDefaults.textFieldColors(
-                    focusedContainerColor= Color.Transparent,
-                    unfocusedContainerColor= Color.Transparent,
-                    disabledContainerColor= Color.Transparent,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    disabledIndicatorColor = Color.Transparent,
-                ),
-                textStyle = TextStyle(
-                    color = Color.Black,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
-                ),
-                modifier = Modifier
-                    .menuAnchor()
-                    .padding(0.dp)
-                    .width(200.dp)
-            )
-
-            ExposedDropdownMenu(
-                expanded = isExpanded,
-                onDismissRequest = {isExpanded = false},
-            ){
-                timeList.forEach { time ->
-                    DropdownMenuItem(
-                        text = {
-                            Text(text = time)
-                        },
-                        onClick = {
-                            isExpanded = false
-                            selectedTime.value = time
-                        }
-                    )
-                }
-            }
-
-        }
-    }
-}
 
 
-@Composable
-fun GameButtonsRow(
-    selectedItem : String,
-    setSelectedItem: (String) -> Unit,
-    setGameOn : (Boolean) -> Unit,
-){
-    Row(
-        modifier = Modifier.padding(horizontal = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        Buttons(
-            items = listOf("당근게임", "풍선게임"),
-            selectedItem = selectedItem,
-            setSelectedItem = { setSelectedItem(it) }
-        )
-        OutlinedButton(
-            onClick = {
-                setGameOn(true)
-            },
-            shape = RoundedCornerShape(10),
-            border = BorderStroke(2.dp, Color.Gray),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color.White,
-                contentColor = Color.Gray
-            ),
-        ) {
-            Icon(painter = painterResource(id = R.drawable.icon_play), contentDescription = null)
-            Spacer(modifier = Modifier.width(5.dp))
-            Text(
-                text = "게임시작",
-                fontWeight = FontWeight.Normal,
-            )
-        }
-    }
-}
-
-@Composable
-fun Buttons(
-    items: List<String>,
-    selectedItem: String,
-    setSelectedItem: (String) -> Unit,
-    useFixedWidth: Boolean = false,
-    itemWidth: Dp = 120.dp,
-    cornerRadius: Int = 10,
-){
-    Row(
-        modifier = Modifier
-    ) {
-        items.forEachIndexed{ index, item ->
-            OutlinedButton(
-                modifier = when(index){
-                    0 -> {
-                        if (useFixedWidth) {
-                            Modifier
-                                .width(itemWidth)
-                                .offset(0.dp, 0.dp)
-                                .zIndex(if (selectedItem == item) 1f else 0f)
-                        } else {
-                            Modifier
-                                .wrapContentSize()
-                                .offset(0.dp, 0.dp)
-                                .zIndex(if (selectedItem == item) 1f else 0f)
-                        }
-                    }
-                    else -> {
-                        if(useFixedWidth){
-                            Modifier
-                                .width(itemWidth)
-                                .offset((-1 * index).dp, 0.dp)
-                                .zIndex(if (selectedItem == item) 1f else 0f)
-                        } else {
-                            Modifier
-                                .wrapContentSize()
-                                .offset((-1 * index).dp, 0.dp)
-                                .zIndex(if (selectedItem == item) 1f else 0f)
-                        }
-                    }
-                },
-                onClick = {
-                    setSelectedItem(item)
-                },
-                shape = when(index) {
-                    //왼쪽 바깥
-                    0 -> RoundedCornerShape(
-                        topStartPercent = cornerRadius,
-                        topEndPercent = 0,
-                        bottomStartPercent = cornerRadius,
-                        bottomEndPercent = 0
-                    )
-                    //오른쪽 끝
-                    items.size - 1 -> RoundedCornerShape(
-                        topStartPercent = 0,
-                        topEndPercent = cornerRadius,
-                        bottomStartPercent = 0,
-                        bottomEndPercent = cornerRadius
-                    )
-                    //가운데 버튼들
-                    else -> RoundedCornerShape(
-                        topStartPercent = 0,
-                        topEndPercent = 0,
-                        bottomStartPercent = 0,
-                        bottomEndPercent = 0
-                    )
-                },
-                border = BorderStroke(
-                    1.dp, if (selectedItem == item){
-                        Color.Gray
-                    } else {
-                        Color.Gray.copy(alpha = 0.75f)
-                    }
-                ),
-                colors = if (selectedItem == item) {
-                    ButtonDefaults.outlinedButtonColors(
-                        //선택된 경우 색
-                        containerColor = Color.Gray
-                    )
-                } else {
-                    ButtonDefaults.outlinedButtonColors(
-                        //선택 안된 경우 색
-                        containerColor = Color.Transparent
-                    )
-                },
-            ) {
-                Text(
-                    text = item,
-                    fontWeight = FontWeight.Normal,
-                    color = if (selectedItem == item) {
-                        Color.White
-                    } else {
-                        Color.Gray.copy(alpha = 0.9f)
-                    }
-                )
-            }
-
-        }
-    }
-}
-
-fun getCurrentDate(): String {
-    val dateFormat = SimpleDateFormat("yyyy-MM-dd")
-    val currentDate = Date()
-    return dateFormat.format(currentDate)
-}
