@@ -113,6 +113,7 @@ fun DeviceScreen(
     bluetoothViewModel : BluetoothViewModel
 ) {
     val selectedChart by chartViewModel.selectedChart.collectAsState()
+    val allCharts by chartViewModel.allCharts.collectAsState()
 
     val (gameOn, setGameOn) = rememberSaveable {
         mutableStateOf(false)
@@ -163,15 +164,31 @@ fun DeviceScreen(
         } else {
             timerRunning.value = false
             if(timerValue.value != 0 && realChewCount.intValue != 0){
-                chartViewModel.addChart(
-                    ChartEntity(
-                        chewCount = realChewCount.intValue.toFloat(),
-                        date = selectedDay.value,
-                        gameMode = selectedGameMode.value,
-                        time = selectedTime.value,
-                        timeFloat = timerValue.value.toFloat()
+                if (allCharts.any { it.time == selectedTime.value && it.gameMode == selectedGameMode.value && it.date == selectedDay.value }){
+                    selectedChart?.let { selectedChart ->
+                        chartViewModel.updateChart(
+                            chartEntity = ChartEntity(
+                                id = selectedChart.id,
+                                chewCount = realChewCount.intValue.toFloat(),
+                                date = selectedDay.value,
+                                gameMode = selectedGameMode.value,
+                                time = selectedTime.value,
+                                timeFloat = timerValue.value.toFloat()
+                            )
+                        )
+                    }
+                } else {
+                    chartViewModel.addChart(
+                        ChartEntity(
+                            chewCount = realChewCount.intValue.toFloat(),
+                            date = selectedDay.value,
+                            gameMode = selectedGameMode.value,
+                            time = selectedTime.value,
+                            timeFloat = timerValue.value.toFloat()
+                        )
                     )
-                )
+                }
+
             }
             Log.d("timer", timerValue.value.toString())
             realChewCount.intValue = 0
