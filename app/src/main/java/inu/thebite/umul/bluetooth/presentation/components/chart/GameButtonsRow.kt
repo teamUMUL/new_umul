@@ -1,6 +1,5 @@
 package inu.thebite.umul.bluetooth.presentation.components.chart
 
-import android.widget.Space
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row

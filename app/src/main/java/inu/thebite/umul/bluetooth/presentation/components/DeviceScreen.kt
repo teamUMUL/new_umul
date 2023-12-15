@@ -1,43 +1,22 @@
 package inu.thebite.umul.bluetooth.presentation.components
 
-import android.content.Context
 import android.util.Log
-import androidx.compose.animation.graphics.ExperimentalAnimationGraphicsApi
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -45,48 +24,23 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import androidx.compose.ui.zIndex
 import com.maxkeppeker.sheets.core.models.base.rememberSheetState
 import com.maxkeppeler.sheets.calendar.CalendarDialog
 import com.maxkeppeler.sheets.calendar.models.CalendarConfig
 import com.maxkeppeler.sheets.calendar.models.CalendarSelection
 import com.maxkeppeler.sheets.calendar.models.CalendarStyle
-import com.patrykandpatrick.vico.compose.axis.axisLabelComponent
-import com.patrykandpatrick.vico.compose.axis.horizontal.rememberBottomAxis
-import com.patrykandpatrick.vico.compose.axis.horizontal.rememberTopAxis
-import com.patrykandpatrick.vico.compose.chart.Chart
-import com.patrykandpatrick.vico.compose.chart.column.columnChart
-import com.patrykandpatrick.vico.core.axis.Axis
-import com.patrykandpatrick.vico.core.axis.AxisPosition
-import com.patrykandpatrick.vico.core.axis.formatter.AxisValueFormatter
-import com.patrykandpatrick.vico.core.component.shape.LineComponent
-import com.patrykandpatrick.vico.core.component.shape.Shapes
-import com.patrykandpatrick.vico.core.entry.ChartEntryModelProducer
-import com.patrykandpatrick.vico.core.entry.entriesOf
 import inu.thebite.umul.R
-import inu.thebite.umul.bluetooth.domain.BluetoothDevice
-import inu.thebite.umul.bluetooth.presentation.BluetoothUiState
-import inu.thebite.umul.bluetooth.presentation.BluetoothViewModel
 import inu.thebite.umul.bluetooth.presentation.ChartViewModel
-import inu.thebite.umul.bluetooth.presentation.components.bluetooth.BluetoothDeviceList
-import inu.thebite.umul.bluetooth.presentation.components.chart.Buttons
-import inu.thebite.umul.bluetooth.presentation.components.chart.CheckGameModeAndChewCount
 import inu.thebite.umul.bluetooth.presentation.components.chart.ChewBarChart
 import inu.thebite.umul.bluetooth.presentation.components.chart.GameButtonsRow
 import inu.thebite.umul.bluetooth.presentation.components.chart.GameScreen
@@ -96,21 +50,14 @@ import inu.thebite.umul.bluetooth.presentation.components.chart.TimeBarChart
 import inu.thebite.umul.bluetooth.presentation.components.chart.getCurrentDate
 import inu.thebite.umul.room.chart.ChartEntity
 import kotlinx.coroutines.delay
-import java.text.SimpleDateFormat
-import java.util.Date
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DeviceScreen(
-    state: BluetoothUiState,
-    onStartScan: () -> Unit,
-    onStopScan: () -> Unit,
-    onStartServer: () -> Unit,
-    onDeviceClick: (BluetoothDevice) -> Unit,
-    selectedChart: ChartEntity?,
     chartViewModel: ChartViewModel,
-    bluetoothViewModel : BluetoothViewModel
+    onClick: () -> Unit,
+    isConnected: Boolean
 ) {
     val selectedChart by chartViewModel.selectedChart.collectAsState()
     val allCharts by chartViewModel.allCharts.collectAsState()
@@ -134,6 +81,9 @@ fun DeviceScreen(
     val timerValue = remember { mutableStateOf(0) }
     val timerRunning = remember { mutableStateOf(false) }
     val realChewCount = rememberSaveable {
+        mutableIntStateOf(0)
+    }
+    val chewCount = rememberSaveable {
         mutableIntStateOf(0)
     }
     LaunchedEffect(Unit){
@@ -192,6 +142,7 @@ fun DeviceScreen(
             }
             Log.d("timer", timerValue.value.toString())
             realChewCount.intValue = 0
+            chewCount.intValue = 0
             delay(1000)
             chartViewModel.getChartByDateAndGameMode(
                 date = selectedDay.value,
@@ -207,7 +158,8 @@ fun DeviceScreen(
             gameStart = gameStart,
             setGameOn = { setGameOn(it) },
             setGameStart = { setGameStart(it) },
-            addRealChewCount = { realChewCount.intValue += 1 }
+            chewCount = chewCount,
+            addRealChewCount = { realChewCount.intValue += 1 },
         )
     }
 
@@ -232,69 +184,7 @@ fun DeviceScreen(
             .padding(10.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth(0.2f)
-                .fillMaxHeight()
-                .border(2.dp, color = Color.Black, RoundedCornerShape(8.dp)),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            when {
-                state.isConnecting -> {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        CircularProgressIndicator()
-                        Text(text = "Connecting...")
-                    }
-                }
 
-                state.isConnected -> {
-                    ChatScreen(
-                        state = state,
-                        onDisconnect = bluetoothViewModel::disconnectFromDevice,
-                        onSendMessage = bluetoothViewModel::sendMessage
-                    )
-                }
-
-                else -> {
-                    BluetoothDeviceList(
-                        pairedDevices = state.pairedDevices,
-                        scannedDevices = state.scannedDevices,
-                        onClick = onDeviceClick,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                    )
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.SpaceAround
-                    ) {
-                        Button(
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = onStartScan
-                        ) {
-                            Text(text = "Start scan")
-                        }
-                        Button(
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = onStopScan
-                        ) {
-                            Text(text = "Stop scan")
-                        }
-                        Button(
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = onStartServer
-                        ) {
-                            Text(text = "Start server")
-                        }
-                    }
-                }
-            }
-
-        }
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -315,6 +205,14 @@ fun DeviceScreen(
                     calendarShow = {calendarState.show()},
                     setSelectedTime = {selectedTime.value = it}
                 )
+                IconButton(
+                    onClick = { onClick() },
+                    modifier = Modifier
+                        .background(color = if(isConnected) Color.Blue else Color.Gray, shape = CircleShape)
+                        .weight(0.05f)
+                ) {
+                    Icon(painter = painterResource(id = R.drawable.icon_bluetooth), contentDescription = null)
+                }
                 GameButtonsRow(
                     modifier = Modifier.weight(0.5f),
                     selectedItem = selectedGameMode.value,
@@ -394,7 +292,9 @@ fun DeviceScreen(
             }
         }
     }
+
 }
+
 
 
 

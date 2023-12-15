@@ -1,14 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
-    
-    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
-    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
+
+    <!-- 안드로이드 12(S)미만에서는 아래 2개의 권한으로도 가능-->
     <uses-permission
-        android:name="android.permission.BLUETOOTH_SCAN"
-        android:usesPermissionFlags="neverForLocation"
-        />
-    <uses-feature android:name="android.hardware.bluetooth"/>
+        android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30" />
+
+    <!--안드로이드 12(S)이상에서는 블루투스 권한이 강화되어서 추가적인 권한설정이 필요하다 -->
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+    <!--안드로이드 8.0(oreo)이상에서는 startActivity()로 백그라운드에서 실행할 수 없고 Foreground Service를 사용해 상단의 notification과 함께 백그라운드에서 사용할 수 있다. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
     <application
         android:name=".UmulApp"
@@ -33,6 +41,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <service android:name=".bluetooth.service.BluetoothService" />
     </application>
 
 </manifest>

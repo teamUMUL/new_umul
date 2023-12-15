@@ -14,7 +14,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,7 +29,6 @@ fun CheckGameModeAndChewCount(
     gameMode : String,
     chewCount : Int
 ){
-    val scope = rememberCoroutineScope()
     var pullCarrotFrame by remember { mutableStateOf(0) }
     var successCarrotFrame by remember { mutableStateOf(0) }
     val image1 = remember { mutableIntStateOf(R.drawable.carrot_game_carrot_1_1) }
