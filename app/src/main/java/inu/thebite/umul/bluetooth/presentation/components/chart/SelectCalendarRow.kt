@@ -1,5 +1,6 @@
 package inu.thebite.umul.bluetooth.presentation.components.chart
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -116,6 +117,7 @@ fun SelectCalendarRow(
     }
 }
 
+@SuppressLint("SimpleDateFormat")
 fun getCurrentDate(): String {
     val dateFormat = SimpleDateFormat("yyyy-MM-dd")
     val currentDate = Date()
